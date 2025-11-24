@@ -1,1 +1,2 @@
 *.gz filter=lfs diff=lfs merge=lfs -text
+neighborhood_chunk_* filter=lfs diff=lfs merge=lfs -text
