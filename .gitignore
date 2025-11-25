@@ -1,0 +1,9 @@
+# .gitignore
+*.gz
+*.csv
+*.tsv
+*.tsv000
+redfin_*
+neighborhood_chunk_*
+data/
+datasets/
