@@ -58,6 +58,59 @@ def clean_housing_data(filepath='realtor-data.zip.csv'):
     print(f"Removed {original_len - len(df):,} duplicates")
     print(f"Remaining: {len(df):,} rows")
     
+    # Feature Engineering 
+    
+    df['price_per_sqft'] = df['price'] / df['house_size']
+    df = df[df['price_per_sqft'] > 0]
+    print(f"Created the price per sqaure foot feature.")
+    
+    df['total_rooms'] = df['bath'] + df['bed']
+    print(f"Created total rooms feature.")
+    
+    df['bath_bed_ratio'] = df['bath'] / df['bed']
+    print(f"Created bath to bed ratio per home.")
+
+    df['size_per_bedroom'] = df['house_size'] / df['bed']
+    print(f"Created the size per bedroom feature.")
+    
+    df['city_median_price'] = df.groupby('city')['price'].transform('median')
+    df['zip_median_ppsf'] = df.groupby('zip_code')['price_per_sqft'].transform('median')
+
+    df['price_vs_city'] = df['price'] / df['city_median_price']
+    df['log_price'] = np.log(df['price'])
+    
+    final_cols = ['price', 'bed',
+        'bath',
+        'house_size',
+        'city',
+        'state',
+        'zip_code',
+        'acre_lot',
+        'price_per_sqft',
+        'total_rooms',
+        'bath_bed_ratio',
+        'size_per_bedroom', 
+        'city_median_price', 
+        'zip_median_ppsf', 
+        'price_vs_city', 
+        'log_price'
+    ]
+
+    final_cols = [col for col in final_cols if col in df.columns]
+    df = df[final_cols]
+    
+    print(f"Selected {len(final_cols)} columns:")
+    for col in final_cols:
+        print(f"    - {col}")
+
+    if 'acre_lot' in df.columns:
+        df['acre_lot'] = df['acre_lot'].fillna(0)
+        print(f"Filled acre_lot nulls with 0")
+        
+    before_null_drop = len(df)
+    df = df.dropna()
+    print(f"Dropped {before_null_drop - len(df):,} rows with remaining nulls")
+
     return df
 
 # Run the cleaning
