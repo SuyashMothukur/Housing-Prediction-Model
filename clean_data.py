@@ -110,7 +110,21 @@ def clean_housing_data(filepath='realtor-data.zip.csv'):
     before_null_drop = len(df)
     df = df.dropna()
     print(f"Dropped {before_null_drop - len(df):,} rows with remaining nulls")
-
+    
+    print("\n" + "=" * 60)
+    print("Final Dataset Stats")
+    print("=" * 60)
+    print(f"Rows: {len(df):,}")
+    print(f"Columns: {len(df.columns):,}")
+    print(f"Min Price: ${df['price'].min():,.0f}")
+    print(f"Max Price: ${df['price'].max():,.0f}")
+    print(f"Mean: ${df['price'].mean():,.0f}")
+    print(f"Median: ${df['price'].median():,.0f}")
+    print(f"Average Bedrooms: {df['bed'].mean():,.0f}")
+    print(f"Average Bathrooms: {df['bath'].mean():,.0f}")
+    print(f"Average square feet: {df['house_size'].mean():,.0f}")
+    print(f"States: {df['state'].nunique()}")
+    print(f"Cities: {df['city'].nunique():,}")
     return df
 
 # Run the cleaning
