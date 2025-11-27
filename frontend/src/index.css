@@ -1,11 +1,123 @@
+/* Import Tailwind CSS */
 @import url('https://cdn.jsdelivr.net/npm/tailwindcss@3.3.0/dist/tailwind.min.css');
 
+/* Reset and Box Sizing */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Body Styling */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background-color: #f9fafb; /* Light gray background for a modern look */
+  color: #1f2937; /* Neutral dark gray for text */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar for Modern Look */
+body::-webkit-scrollbar {
+  width: 8px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #f3f4f6; /* Light gray */
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #9ca3af; /* Neutral gray */
+  border-radius: 4px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; /* Darker gray on hover */
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: #111827; /* Darker gray for headings */
+}
+
+/* Links */
+a {
+  color: #2563eb; /* Tailwind blue-600 */
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: #1d4ed8; /* Tailwind blue-700 */
+}
+
+/* Buttons */
+button {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+  transform: scale(1.02);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Inputs */
+input, textarea, select {
+  font-family: 'Inter', sans-serif;
+  border-radius: 8px;
+  border: 1px solid #d1d5db; /* Tailwind gray-300 */
+  padding: 0.75rem 1rem;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #2563eb; /* Tailwind blue-600 */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3); /* Blue focus ring */
+  outline: none;
+}
+
+/* Cards */
+.card {
+  background-color: #ffffff; /* White background */
+  border-radius: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  padding: 1.5rem;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow */
+}
+
+/* Utility Classes */
+.text-gradient {
+  background: linear-gradient(90deg, #2563eb, #9333ea); /* Blue to purple gradient */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-gradient {
+  background: linear-gradient(135deg, #2563eb, #9333ea); /* Blue to purple gradient */
+}
+
+.shadow-soft {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-medium {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-strong {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }

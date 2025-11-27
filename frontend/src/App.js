@@ -17,16 +17,22 @@ const HousingPricePredictor = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+    let parsedValue = parseFloat(value);
 
-  const handleSliderChange = (name, value) => {
+    // Enforce restrictions on input values
+    if (name === 'bed' || name === 'bath') {
+      parsedValue = Math.max(1, Math.min(10, parsedValue || 0)); // Restrict to 1-10
+    } else if (name === 'house_size') {
+      parsedValue = Math.min(20000, parsedValue || 0); // Restrict to max 20,000
+    } else if (name === 'acre_lot') {
+      parsedValue = Math.max(0, parsedValue || 0); // Ensure non-negative values
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: parseInt(value)
+      [name]: name === 'bed' || name === 'bath' || name === 'house_size' || name === 'acre_lot'
+        ? parsedValue
+        : value
     }));
   };
 
@@ -36,7 +42,6 @@ const HousingPricePredictor = () => {
 
     // Simulate API call
     setTimeout(() => {
-      // Mock prediction (in production, this would call your Flask API)
       const basePrices = {
         'California': 650000,
         'Washington': 550000,
@@ -97,69 +102,60 @@ const HousingPricePredictor = () => {
         {/* Main Card */}
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           <div className="p-8 space-y-6">
-            {/* Bedrooms Slider */}
+            {/* Bedrooms Input */}
             <div>
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
                 <Bed className="w-5 h-5 text-blue-600" />
-                Bedrooms: <span className="text-blue-600 text-lg">{formData.bed}</span>
+                Bedrooms:
               </label>
               <input
-                type="range"
+                type="number"
                 name="bed"
                 min="1"
                 max="10"
                 value={formData.bed}
-                onChange={(e) => handleSliderChange('bed', e.target.value)}
-                className="w-full h-3 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                onChange={handleInputChange}
+                placeholder="Number of bedrooms"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>1 bed</span>
-                <span>10 beds</span>
-              </div>
             </div>
 
-            {/* Bathrooms Slider */}
+            {/* Bathrooms Input */}
             <div>
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
                 <Bath className="w-5 h-5 text-blue-600" />
-                Bathrooms: <span className="text-blue-600 text-lg">{formData.bath}</span>
+                Bathrooms:
               </label>
               <input
-                type="range"
+                type="number"
                 name="bath"
                 min="1"
-                max="8"
+                max="10"
                 step="0.5"
                 value={formData.bath}
-                onChange={(e) => handleSliderChange('bath', e.target.value)}
-                className="w-full h-3 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                onChange={handleInputChange}
+                placeholder="Number of bathrooms"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>1 bath</span>
-                <span>8 baths</span>
-              </div>
             </div>
 
-            {/* House Size Slider */}
+            {/* House Size Input */}
             <div>
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
                 <Maximize className="w-5 h-5 text-blue-600" />
-                Square Feet: <span className="text-blue-600 text-lg">{formData.house_size.toLocaleString()} sqft</span>
+                Square Feet:
               </label>
               <input
-                type="range"
+                type="number"
                 name="house_size"
                 min="500"
-                max="8000"
+                max="20000"
                 step="100"
                 value={formData.house_size}
-                onChange={(e) => handleSliderChange('house_size', e.target.value)}
-                className="w-full h-3 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                onChange={handleInputChange}
+                placeholder="Square footage"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>500 sqft</span>
-                <span>8,000 sqft</span>
-              </div>
             </div>
 
             {/* Location Inputs */}
