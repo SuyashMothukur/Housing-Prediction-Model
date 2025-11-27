@@ -86,3 +86,5 @@ Min price: $0
 Max price: $2,147,483,600
 Median price: $325,000
 Mean price: $524,196
+
+

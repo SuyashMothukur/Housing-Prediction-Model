@@ -91,7 +91,7 @@ def clean_housing_data(filepath='realtor-data.zip.csv'):
         'bath_bed_ratio',
         'size_per_bedroom', 
         'city_median_price', 
-        'zip_median_ppsf', 
+        'zip_median_ppsf',
         'price_vs_city', 
         'log_price'
     ]
