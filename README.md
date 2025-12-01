@@ -1,14 +1,28 @@
 # Housing Price Prediction Model
 
-# TO RUN
+A machine learning-powered application for predicting housing prices. This project uses a **Flask** backend to serve the prediction API and a **React** frontend for user interaction.
 
-Start Flask on the backend using: python app.py
+---
 
-Leave the terminal running and open a new one
+## **Features**
 
-Second terminal navigate to frontend folder (cd frontend)
+- Predict housing prices based on user input such as location, square footage, number of bedrooms, and bathrooms.
+- Clean and responsive frontend interface for easy interaction.
+- REST API backend serving real-time predictions via Flask.
 
-npm start
+---
 
-python app.py
-cd frontend && npm start
+## **Tech Stack**
+
+- **Backend:** Python, Flask
+- **Frontend:** React, JavaScript, HTML, CSS
+- **Machine Learning:** Scikit-learn / XGBoost
+
+---
+
+# **Usage**
+
+1. Start the backend: python app.py
+2. Start the frontend:
+   - cd frontend
+   - npm start
