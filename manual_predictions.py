@@ -3,17 +3,14 @@ import numpy as np
 import pickle
 
 class HousingPricePredictor:
-    """Simple predictor for testing manual inputs"""
+    """Predictor with proper geographic target encoding"""
     
     def __init__(self):
-        """Load the trained model and encoders"""
+        """Load the trained model"""
         print("Loading model...")
         
         with open('xgboost_housing_model.pkl', 'rb') as f:
             self.model = pickle.load(f)
-        
-        with open('label_encoders.pkl', 'rb') as f:
-            self.label_encoders = pickle.load(f)
         
         with open('feature_names.pkl', 'rb') as f:
             self.feature_names = pickle.load(f)
@@ -21,8 +18,38 @@ class HousingPricePredictor:
         with open('model_metadata.pkl', 'rb') as f:
             self.metadata = pickle.load(f)
         
-        # Load training data for reference values
+        # Load training data for target encoding lookups
         self.training_data = pd.read_csv('housing_data_cleaned.csv')
+        
+        # Pre-calculate target encoding mappings
+        self.city_encoding = self.training_data.groupby('city')['price'].mean().to_dict()
+        self.state_encoding = self.training_data.groupby('state')['price'].mean().to_dict()
+        self.zip_encoding = self.training_data.groupby('zip_code')['price'].mean().to_dict()
+        
+        # Region mapping
+        self.region_mapping = {
+            'Connecticut': 'Northeast', 'Maine': 'Northeast', 'Massachusetts': 'Northeast',
+            'New Hampshire': 'Northeast', 'Rhode Island': 'Northeast', 'Vermont': 'Northeast',
+            'New Jersey': 'Northeast', 'New York': 'Northeast', 'Pennsylvania': 'Northeast',
+            'Illinois': 'Midwest', 'Indiana': 'Midwest', 'Michigan': 'Midwest',
+            'Ohio': 'Midwest', 'Wisconsin': 'Midwest', 'Iowa': 'Midwest',
+            'Kansas': 'Midwest', 'Minnesota': 'Midwest', 'Missouri': 'Midwest',
+            'Nebraska': 'Midwest', 'North Dakota': 'Midwest', 'South Dakota': 'Midwest',
+            'Delaware': 'South', 'Florida': 'South', 'Georgia': 'South',
+            'Maryland': 'South', 'North Carolina': 'South', 'South Carolina': 'South',
+            'Virginia': 'South', 'District of Columbia': 'South', 'West Virginia': 'South',
+            'Alabama': 'South', 'Kentucky': 'South', 'Mississippi': 'South',
+            'Tennessee': 'South', 'Arkansas': 'South', 'Louisiana': 'South',
+            'Oklahoma': 'South', 'Texas': 'South',
+            'Arizona': 'West', 'Colorado': 'West', 'Idaho': 'West',
+            'Montana': 'West', 'Nevada': 'West', 'New Mexico': 'West',
+            'Utah': 'West', 'Wyoming': 'West', 'Alaska': 'West',
+            'California': 'West', 'Hawaii': 'West', 'Oregon': 'West',
+            'Washington': 'West',
+            'Puerto Rico': 'South', 'Virgin Islands': 'South'
+        }
+        
+        self.region_encoding = self.training_data.groupby('region')['price'].mean().to_dict()
         
         print("✓ Model loaded successfully!")
         print(f"  Model R² Score: {self.metadata['test_r2']:.4f}")
@@ -30,23 +57,8 @@ class HousingPricePredictor:
     
     
     def predict(self, bed, bath, house_size, city, state, zip_code, acre_lot=0):
-        """
-        Predict housing price with manual input
+        """Predict housing price with proper target encoding"""
         
-        Args:
-            bed: int - number of bedrooms (1-15)
-            bath: float - number of bathrooms (0.5-10)
-            house_size: int - square footage (200-20000)
-            city: str - city name (e.g., 'Seattle', 'Los Angeles')
-            state: str - state name (e.g., 'Washington', 'California')
-            zip_code: int - zip code
-            acre_lot: float - lot size in acres (optional, default 0)
-        
-        Returns:
-            dict with prediction and details
-        """
-        
-        # Create property data dictionary
         property_data = {
             'bed': float(bed),
             'bath': float(bath),
@@ -57,77 +69,79 @@ class HousingPricePredictor:
             'zip_code': int(zip_code)
         }
         
-        # Create DataFrame
         df = pd.DataFrame([property_data])
         
-        # === FEATURE ENGINEERING (same as training) ===
+        # ========================================
+        # FEATURE ENGINEERING (same as training)
+        # ========================================
         
         # Basic features
-        df['price_per_sqft'] = 0  # Placeholder, will use zip median
+        df['price_per_sqft'] = 0  # Placeholder
         df['total_rooms'] = df['bed'] + df['bath']
         df['bath_bed_ratio'] = df['bath'] / df['bed']
         df['size_per_bedroom'] = df['house_size'] / df['bed']
         
-        # Get city median price from training data
+        # ========================================
+        # TARGET ENCODING (THE FIX!)
+        # ========================================
+        
+        # City target encoding
+        df['city_target_encoded'] = df['city'].map(self.city_encoding)
+        if pd.isna(df['city_target_encoded'].iloc[0]):
+            # City not in training data, use state average
+            df['city_target_encoded'] = df['state'].map(self.state_encoding)
+            print(f"  ℹ️  {city} not in training data, using state average")
+        
+        # State target encoding
+        df['state_target_encoded'] = df['state'].map(self.state_encoding)
+        if pd.isna(df['state_target_encoded'].iloc[0]):
+            # State not in training data, use national average
+            df['state_target_encoded'] = self.training_data['price'].mean()
+            print(f"  ⚠️  {state} not in training data, using national average")
+        
+        # Zip target encoding
+        df['zip_target_encoded'] = df['zip_code'].map(self.zip_encoding)
+        if pd.isna(df['zip_target_encoded'].iloc[0]):
+            # Zip not found, use city encoding
+            df['zip_target_encoded'] = df['city_target_encoded']
+        
+        # Region encoding
+        region = self.region_mapping.get(state, 'Other')
+        df['region_target_encoded'] = self.region_encoding.get(region, self.training_data['price'].mean())
+        
+        # State median price
+        state_data = self.training_data[self.training_data['state'] == state]
+        if len(state_data) > 0:
+            df['state_median_price'] = state_data['price'].median()
+        else:
+            df['state_median_price'] = self.training_data['price'].median()
+        
+        # Legacy features (for compatibility)
         city_data = self.training_data[self.training_data['city'] == city]
-        
         if len(city_data) > 0:
-            city_median = city_data['price'].median()
+            df['city_median_price'] = city_data['price'].median()
+            df['zip_median_ppsf'] = city_data['price_per_sqft'].median()
         else:
-            # City not found, use state median
-            state_data = self.training_data[self.training_data['state'] == state]
-            if len(state_data) > 0:
-                city_median = state_data['price'].median()
-            else:
-                # State not found, use overall median
-                city_median = self.training_data['price'].median()
+            df['city_median_price'] = df['state_median_price']
+            df['zip_median_ppsf'] = self.training_data['price_per_sqft'].median()
         
-        df['city_median_price'] = city_median
-        
-        # Get zip median price per sqft
-        zip_data = self.training_data[self.training_data['zip_code'] == zip_code]
-        
-        if len(zip_data) > 0:
-            zip_median_ppsf = zip_data['price_per_sqft'].median()
-        else:
-            # Zip not found, use city median
-            if len(city_data) > 0:
-                zip_median_ppsf = city_data['price_per_sqft'].median()
-            else:
-                # Use overall median
-                zip_median_ppsf = self.training_data['price_per_sqft'].median()
-        
-        df['zip_median_ppsf'] = zip_median_ppsf
-        df['price_per_sqft'] = zip_median_ppsf
-        df['price_vs_city'] = 1.0  # Neutral starting point
-        
-        # === ENCODE CATEGORICAL VARIABLES ===
-        
-        for col in ['city', 'state']:
-            if col in self.label_encoders:
-                le = self.label_encoders[col]
-                try:
-                    df[col] = le.transform(df[col].astype(str))
-                except ValueError:
-                    # Value not seen during training, use mode (most common)
-                    df[col] = 0
-                    print(f"  ⚠️  Warning: {col} '{property_data[col]}' not in training data, using fallback")
-        
-        # === SELECT FEATURES IN CORRECT ORDER ===
+        df['price_per_sqft'] = df['zip_median_ppsf']
+        df['price_vs_city'] = 1.0
+        df['price_vs_state'] = 1.0
         
         # Ensure all features exist
         for col in self.feature_names:
             if col not in df.columns:
                 df[col] = 0
         
-        # Select only training features in correct order
+        # Select features in correct order
         X = df[self.feature_names]
         
-        # === MAKE PREDICTION ===
+        # ========================================
+        # MAKE PREDICTION
+        # ========================================
         
         predicted_price = self.model.predict(X)[0]
-        
-        # Calculate confidence interval (±1 MAE)
         mae = self.metadata['test_mae']
         
         result = {
@@ -138,8 +152,10 @@ class HousingPricePredictor:
             },
             'property_details': property_data,
             'market_context': {
-                'city_median': city_median,
-                'zip_median_ppsf': zip_median_ppsf
+                'city_avg': df['city_target_encoded'].iloc[0],
+                'state_avg': df['state_target_encoded'].iloc[0],
+                'zip_avg': df['zip_target_encoded'].iloc[0],
+                'region': region
             }
         }
         
@@ -147,7 +163,7 @@ class HousingPricePredictor:
     
     
     def print_prediction(self, result):
-        """Pretty print prediction results"""
+        """Pretty print results"""
         print("\n" + "=" * 70)
         print("🏠 PRICE PREDICTION")
         print("=" * 70)
@@ -169,8 +185,10 @@ class HousingPricePredictor:
         
         market = result['market_context']
         print(f"\n📈 Market Context:")
-        print(f"   City Median Price: ${market['city_median']:,.0f}")
-        print(f"   Zip Median $/sqft: ${market['zip_median_ppsf']:,.0f}")
+        print(f"   City Average:   ${market['city_avg']:,.0f}")
+        print(f"   State Average:  ${market['state_avg']:,.0f}")
+        print(f"   Zip Average:    ${market['zip_avg']:,.0f}")
+        print(f"   Region: {market['region']}")
         
         print("\n" + "=" * 70)
 
@@ -179,99 +197,79 @@ class HousingPricePredictor:
 # TEST PREDICTIONS
 # ========================================
 if __name__ == "__main__":
-    # Initialize predictor
     predictor = HousingPricePredictor()
     
     print("\n" + "🎯" * 35)
-    print("TESTING PREDICTIONS")
+    print("TESTING GEOGRAPHIC PREDICTIONS")
     print("🎯" * 35)
     
-    # ========================================
-    # TEST 1: Everett, Washington (Your location!)
-    # ========================================
+    # TEST: Phoenix, Arizona (Should be ~$380-450k)
     print("\n\n" + "=" * 70)
-    print("TEST 1: REDMOND, WASHINGTON")
+    print("TEST 1: PHOENIX, ARIZONA (Mid-tier market)")
     print("=" * 70)
     
     result1 = predictor.predict(
-        bed=4,
-        bath=2.5,
-        house_size=2540,
-        city='Redmond',
-        state='Washington',
-        zip_code=98052,
-        acre_lot=0.17
+        bed=3,
+        bath=2.0,
+        house_size=1800,
+        city='Phoenix',
+        state='Arizona',
+        zip_code=85001,
+        acre_lot=0.15
     )
     predictor.print_prediction(result1)
+    print(f"\n💡 Expected: ~$380,000-$450,000")
+    print(f"   Actual:   ${result1['predicted_price']:,.0f}")
     
-    # ========================================
-    # TEST 2: Seattle, Washington
-    # ========================================
+    # TEST: Seattle, Washington (Should be ~$750-900k)
     print("\n\n" + "=" * 70)
-    print("TEST 2: SEATTLE, WASHINGTON")
+    print("TEST 2: SEATTLE, WASHINGTON (High-cost market)")
     print("=" * 70)
     
     result2 = predictor.predict(
-        bed=4,
-        bath=2.5,
-        house_size=2710,
+        bed=3,
+        bath=2.0,
+        house_size=1800,
         city='Seattle',
         state='Washington',
         zip_code=98101,
-        acre_lot=0.048
+        acre_lot=0.10
     )
     predictor.print_prediction(result2)
+    print(f"\n💡 Expected: ~$750,000-$900,000")
+    print(f"   Actual:   ${result2['predicted_price']:,.0f}")
     
-    # ========================================
-    # TEST 3: Los Angeles, California
-    # ========================================
+    # TEST: Dallas, Texas (Should be ~$320-400k)
     print("\n\n" + "=" * 70)
-    print("TEST 3: LOS ANGELES, CALIFORNIA")
+    print("TEST 3: DALLAS, TEXAS (Mid-tier market)")
     print("=" * 70)
     
     result3 = predictor.predict(
         bed=3,
         bath=2.0,
-        house_size=1500,
-        city='Los Angeles',
-        state='California',
-        zip_code=90210,
-        acre_lot=0.2
+        house_size=1800,
+        city='Dallas',
+        state='Texas',
+        zip_code=75201,
+        acre_lot=0.15
     )
     predictor.print_prediction(result3)
+    print(f"\n💡 Expected: ~$320,000-$400,000")
+    print(f"   Actual:   ${result3['predicted_price']:,.0f}")
     
-    # ========================================
-    # TEST 4: New York, New York
-    # ========================================
     print("\n\n" + "=" * 70)
-    print("TEST 4: NEW YORK, NEW YORK")
+    print("TEST 4: HARTFORD, CONNECTICUT (Mid-tier market)")
     print("=" * 70)
     
     result4 = predictor.predict(
-        bed=2,
-        bath=2.0,
-        house_size=1200,
-        city='New York',
-        state='New York',
-        zip_code=10001,
-        acre_lot=0
+        bed=3, 
+        bath=3.0, 
+        house_size=1380, 
+        city='Chicago',
+        state='Illinois',
+        zip_code=60651, 
+        acre_lot=0.08
     )
     predictor.print_prediction(result4)
-    
-    # ========================================
-    # TEST 5: Miami, Florida
-    # ========================================
-    print("\n\n" + "=" * 70)
-    print("TEST 5: MIAMI, FLORIDA")
-    print("=" * 70)
-    
-    result5 = predictor.predict(
-        bed=4,
-        bath=3.0,
-        house_size=2500,
-        city='Miami',
-        state='Florida',
-        zip_code=33101,
-        acre_lot=0.25
-    )
-    predictor.print_prediction(result5)
+    print(f"\n💡 Expected: ~$395,000-$425,000")
+    print(f"   Actual:   ${result3['predicted_price']:,.0f}")

@@ -73,26 +73,113 @@ def clean_housing_data(filepath='realtor-data.zip.csv'):
     df['size_per_bedroom'] = df['house_size'] / df['bed']
     print(f"Created the size per bedroom feature.")
     
+    # ========================================
+    # FIX #1: TARGET ENCODING FOR GEOGRAPHY
+    # ========================================
+    print("\n🔧 GEOGRAPHIC TARGET ENCODING:")
+    
+    # City target encoding - MEAN price per city
+    df['city_target_encoded'] = df.groupby('city')['price'].transform('mean')
+    print(f"✓ Created 'city_target_encoded' - captures actual city price levels")
+    
+    # State target encoding - MEAN price per state
+    df['state_target_encoded'] = df.groupby('state')['price'].transform('mean')
+    print(f"✓ Created 'state_target_encoded' - captures state-level pricing")
+    
+    # Zip target encoding - MEAN price per zip
+    df['zip_target_encoded'] = df.groupby('zip_code')['price'].transform('mean')
+    print(f"✓ Created 'zip_target_encoded' - hyper-local pricing")
+    
+    # ========================================
+    # FIX #2: ADD REGION ENCODING
+    # ========================================
+    print("\n🗺️  REGIONAL GROUPING:")
+    
+    # US Census regions
+    region_mapping = {
+        # Northeast
+        'Connecticut': 'Northeast', 'Maine': 'Northeast', 'Massachusetts': 'Northeast',
+        'New Hampshire': 'Northeast', 'Rhode Island': 'Northeast', 'Vermont': 'Northeast',
+        'New Jersey': 'Northeast', 'New York': 'Northeast', 'Pennsylvania': 'Northeast',
+        
+        # Midwest
+        'Illinois': 'Midwest', 'Indiana': 'Midwest', 'Michigan': 'Midwest',
+        'Ohio': 'Midwest', 'Wisconsin': 'Midwest', 'Iowa': 'Midwest',
+        'Kansas': 'Midwest', 'Minnesota': 'Midwest', 'Missouri': 'Midwest',
+        'Nebraska': 'Midwest', 'North Dakota': 'Midwest', 'South Dakota': 'Midwest',
+        
+        # South
+        'Delaware': 'South', 'Florida': 'South', 'Georgia': 'South',
+        'Maryland': 'South', 'North Carolina': 'South', 'South Carolina': 'South',
+        'Virginia': 'South', 'District of Columbia': 'South', 'West Virginia': 'South',
+        'Alabama': 'South', 'Kentucky': 'South', 'Mississippi': 'South',
+        'Tennessee': 'South', 'Arkansas': 'South', 'Louisiana': 'South',
+        'Oklahoma': 'South', 'Texas': 'South',
+        
+        # West
+        'Arizona': 'West', 'Colorado': 'West', 'Idaho': 'West',
+        'Montana': 'West', 'Nevada': 'West', 'New Mexico': 'West',
+        'Utah': 'West', 'Wyoming': 'West', 'Alaska': 'West',
+        'California': 'West', 'Hawaii': 'West', 'Oregon': 'West',
+        'Washington': 'West',
+        
+        # Territories
+        'Puerto Rico': 'South', 'Virgin Islands': 'South'
+    }
+    
+    df['region'] = df['state'].map(region_mapping).fillna('Other')
+    print(f"✓ Created 'region' - grouped states into Census regions")
+    print(f"  Regions: {df['region'].unique().tolist()}")
+    
+    # Region target encoding
+    df['region_target_encoded'] = df.groupby('region')['price'].transform('mean')
+    print(f"✓ Created 'region_target_encoded'")
+    
+    # ========================================
+    # FIX #3: STATE MEDIAN PRICE
+    # ========================================
+    df['state_median_price'] = df.groupby('state')['price'].transform('median')
+    print(f"✓ Created 'state_median_price' - state-level price anchor")
+    
+    # Keep old features for compatibility
     df['city_median_price'] = df.groupby('city')['price'].transform('median')
     df['zip_median_ppsf'] = df.groupby('zip_code')['price_per_sqft'].transform('median')
-
-    df['price_vs_city'] = df['price'] / df['city_median_price']
-    df['log_price'] = np.log(df['price'])
+    print(f"✓ Kept legacy features for compatibility")
     
-    final_cols = ['price', 'bed',
-        'bath',
-        'house_size',
-        'city',
-        'state',
-        'zip_code',
-        'acre_lot',
-        'price_per_sqft',
-        'total_rooms',
-        'bath_bed_ratio',
-        'size_per_bedroom', 
-        'city_median_price', 
+    # ========================================
+    # ADDITIONAL FEATURES
+    # ========================================
+    df['price_vs_city'] = df['price'] / df['city_median_price']
+    df['price_vs_state'] = df['price'] / df['state_median_price']
+    df['log_price'] = np.log(df['price'])
+    print(f"✓ Created price ratio features")
+    
+    final_cols = [
+        'price',  # TARGET
+        
+        # Property features
+        'bed', 'bath', 'house_size', 'acre_lot',
+        
+        # Engineered property features
+        'price_per_sqft', 'total_rooms', 'bath_bed_ratio', 'size_per_bedroom',
+        
+        # 🔥 NEW: Geographic target encodings (THE FIX!)
+        'city_target_encoded',
+        'state_target_encoded', 
+        'zip_target_encoded',
+        'region_target_encoded',
+        'state_median_price',
+        
+        # Legacy geographic features (keep for compatibility)
+        'city_median_price',
         'zip_median_ppsf',
-        'price_vs_city', 
+        'price_vs_city',
+        'price_vs_state',
+        
+        # Original categorical columns (will be dropped after target encoding)
+        'city', 'state', 'zip_code', 'region',
+        
+        # Other
         'log_price'
     ]
 
@@ -106,25 +193,38 @@ def clean_housing_data(filepath='realtor-data.zip.csv'):
     if 'acre_lot' in df.columns:
         df['acre_lot'] = df['acre_lot'].fillna(0)
         print(f"Filled acre_lot nulls with 0")
-        
+       
+    df = df.replace([np.inf, -np.inf], np.nan) 
     before_null_drop = len(df)
     df = df.dropna()
     print(f"Dropped {before_null_drop - len(df):,} rows with remaining nulls")
     
     print("\n" + "=" * 60)
-    print("Final Dataset Stats")
+    print("FINAL DATASET STATS")
     print("=" * 60)
     print(f"Rows: {len(df):,}")
-    print(f"Columns: {len(df.columns):,}")
+    print(f"Columns: {len(df.columns)}")
     print(f"Min Price: ${df['price'].min():,.0f}")
     print(f"Max Price: ${df['price'].max():,.0f}")
     print(f"Mean: ${df['price'].mean():,.0f}")
     print(f"Median: ${df['price'].median():,.0f}")
-    print(f"Average Bedrooms: {df['bed'].mean():,.0f}")
-    print(f"Average Bathrooms: {df['bath'].mean():,.0f}")
-    print(f"Average square feet: {df['house_size'].mean():,.0f}")
-    print(f"States: {df['state'].nunique()}")
-    print(f"Cities: {df['city'].nunique():,}")
+    
+    print(f"\n📍 Geographic Features Summary:")
+    print(f"  States: {df['state'].nunique()}")
+    print(f"  Cities: {df['city'].nunique():,}")
+    print(f"  Zip Codes: {df['zip_code'].nunique():,}")
+    print(f"  Regions: {df['region'].nunique()}")
+    
+    # Show some target encoding examples
+    print(f"\n💰 Target Encoding Examples:")
+    state_prices = df.groupby('state')['state_target_encoded'].first().sort_values(ascending=False)
+    print(f"  Most expensive states:")
+    for state, price in state_prices.head(5).items():
+        print(f"    {state:20s}: ${price:,.0f}")
+    print(f"  Least expensive states:")
+    for state, price in state_prices.tail(5).items():
+        print(f"    {state:20s}: ${price:,.0f}")
+    
     return df
 
 # Run the cleaning
