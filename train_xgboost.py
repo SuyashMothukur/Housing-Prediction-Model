@@ -90,14 +90,30 @@ def train_housing_model(data_path='housing_data_cleaned.csv'):
     }
     
     model = xgb.XGBRegressor(**params)
-    
+
     print(f"\nTraining started...")
     model.fit(
         X_train, y_train,
         eval_set=[(X_train, y_train), (X_test, y_test)],
-        verbose=50
+        eval_metric="rmse",
+        verbose=False
     )
     print(f"✓ Training completed!")
+
+    # ========================
+    # Extract Loss Curves
+    # ========================
+    evals_result = model.evals_result()
+    train_losses = evals_result['validation_0']['rmse']
+    val_losses   = evals_result['validation_1']['rmse']
+
+    # ========================
+    # Plot Loss Curve
+    # ========================
+    from visualizations import plot_loss_curve
+    plot_loss_curve(train_losses, val_losses)
+    print("📊 Saved: plots/loss_curve.png")
+
     
     # ========================================
     # MAKE PREDICTIONS
