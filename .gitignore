@@ -1,6 +1,5 @@
 # .gitignore
 *.gz
-*.csv
 *.tsv
 *.tsv000
 redfin_*
