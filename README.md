@@ -18,7 +18,7 @@ A machine learning-powered application for predicting housing prices. This proje
 - **Frontend:** React, JavaScript, HTML, CSS
 - **Machine Learning:** Scikit-learn / XGBoost
 
----
+---frfr
 
 # **Usage**
 
